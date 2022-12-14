@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: &name install-ib-driver
+  labels:
+    app: *name
+spec:
+  selector:
+    matchLabels:
+      app: *name
+  template:
+    metadata:
+      labels:
+        app: *name
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node.kubernetes.io/instance-type
+                operator: In
+                values:
+                - Standard_H16mr
+                - Standard_H16mr_Promo
+                - Standard_H16r
+                - Standard_H16r_Promo
+                - Standard_H8_Promo
+                - Standard_HB120-16rs_v2
+                - Standard_HB120-32rs_v2
+                - Standard_HB120-64rs_v2
+                - Standard_HB120-96rs_v2
+                - Standard_HB120rs_v2
+                - Standard_HB120-16rs_v3
+                - Standard_HB120-32rs_v3
+                - Standard_HB120-64rs_v3
+                - Standard_HB120-96rs_v3
+                - Standard_HB120rs_v3
+                - Standard_HB60-15rs
+                - Standard_HB60-30rs
+                - Standard_HB60-45rs
+                - Standard_HB60rs
+                - Standard_NC24rs_v2
+                - Standard_ND96amsr_A100_v4
+                - Standard_ND96asr_v4
+                - Standard_HC44rs
+
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - image: <insert image name here>
+        imagePullPolicy: Always
+        name: *name
+        command: ["/entrypoint.sh"] 
+        args: ["install"] # set this to "downloadandinstall" if you are not using a custom image
+        resources:
+          requests:
+            {}
+          limits:
+            {}
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: actions
+          mountPath: "/opt/actions"
+        - name: hostmount
+          mountPath: "/mnt/actions"
+      volumes:
+      - name: hostmount
+        hostPath:
+          path: /opt/actions
+          type: DirectoryOrCreate
+      - name: actions
+        configMap:
+          name: install-driver-actions
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: install-driver-actions
+  labels:
+    app: install-ib-driver
+data:
+  install: |
+    #!/usr/bin/env bash
+    set -eo pipefail
+
+    # This script should be executed on VM host and 
+    # will install systemd units and host dependencies.
+
+    SECONDS=0
+
+    umount /mnt || true
+
+    # create /etc/modules-load.d/ib.conf
+    echo "rdma_ucm" > /etc/modules-load.d/ib.conf
+    echo "ib_ipoib" >> /etc/modules-load.d/ib.conf        
+
+    # create /etc/modprobe.d/ib_ipoib.conf
+    echo "alias netdev-ib* ib_ipoib" > /etc/modprobe.d/ib_ipoib.conf    
+
+    # load modules
+    modprobe rdma_ucm
+    modprobe ib_ipoib
+        
+    # configure RDMA in waagent.conf and restart to opatin IP address for ib0
+    echo "OS.EnableRDMA=y" >> /etc/waagent.conf
+    systemctl restart waagent
+
+    set -x
+
+    check_ib="$(ip link | grep ib0)"
+
+    if [ -z "$check_ib" ];
+    then
+      echo "driver installation failed"
+      exit 1
+    else
+      echo "driver installation successful"
+    fi
+    echo "installation completed in $SECONDS seconds"
+---
