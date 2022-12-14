@@ -1,4 +1,6 @@
 # AKS RDMA/Infiniband Support for CBL-Mariner nodes
+This is a clone of https://github.com/Azure/aks-rdma-infiniband with adaptations for CBL-mariner Linux 2.0.
+
 To support running HPC workloads using RDMA/Infiniband on AKS, this repo provides a daemonset to install the necessary RDMA drivers and device plugins on HPC-series VMs. 
 
 ## Prerequisites
