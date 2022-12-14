@@ -10,7 +10,7 @@ This installation assumes you have the following setup:
 - AKS nodepool with RDMA-capable skus:
     - Refer to the HPC docs: https://docs.microsoft.com/en-us/azure/virtual-machines/sizes-hpc
     - Sample command to create AKS nodepool with HPC-sku (assuming aks resource group and cluster already created): 
-        - `az aks nodepool add --resource-group <resource group name> --cluster-name <cluster name> --name rdmanp --node-count 2 --node-vm-size Standard_HB120rs_v2`
+        - `az aks nodepool add --resource-group <resource group name> --cluster-name <cluster name> --name rdmanp --node-count 2 --os-sku CBLMariner --node-vm-size Standard_HB120rs_v2`
         - Note: VM size names are case-sensitive
     
 ## Configuration
